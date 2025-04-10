@@ -1,6 +1,6 @@
-package org.makarfp.griefNotify.data;
+package org.makarfp.griefnotify.data;
 
-import org.makarfp.griefNotify.GriefNotify;
+import org.makarfp.griefnotify.GriefNotify;
 
 import java.sql.Connection;
 import java.sql.DriverManager;

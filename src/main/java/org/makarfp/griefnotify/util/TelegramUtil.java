@@ -1,11 +1,11 @@
-package org.makarfp.griefNotify.utils;
+package org.makarfp.griefnotify.util;
 
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 
-import org.makarfp.griefNotify.config.ConfigManager;
+import org.makarfp.griefnotify.config.ConfigManager;
 
 public class TelegramUtil {
 

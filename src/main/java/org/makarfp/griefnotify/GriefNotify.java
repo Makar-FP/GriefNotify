@@ -1,11 +1,11 @@
-package org.makarfp.griefNotify;
+package org.makarfp.griefnotify;
 
 import org.bukkit.plugin.java.JavaPlugin;
-import org.makarfp.griefNotify.commands.GriefNotifyCommand;
-import org.makarfp.griefNotify.config.ConfigManager;
-import org.makarfp.griefNotify.data.DatabaseManager;
-import org.makarfp.griefNotify.listeners.GriefListener;
-import org.makarfp.griefNotify.utils.TelegramUtil;
+import org.makarfp.griefnotify.command.GriefNotifyCommand;
+import org.makarfp.griefnotify.config.ConfigManager;
+import org.makarfp.griefnotify.data.DatabaseManager;
+import org.makarfp.griefnotify.listener.GriefListener;
+import org.makarfp.griefnotify.util.TelegramUtil;
 
 public final class GriefNotify extends JavaPlugin {
 

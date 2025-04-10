@@ -1,6 +1,6 @@
 name: GriefNotify
 version: '1.0-SNAPSHOT'
-main: org.makarfp.griefNotify.GriefNotify
+main: org.makarfp.griefnotify.GriefNotify
 api-version: '1.21'
 commands:
   griefnotify:

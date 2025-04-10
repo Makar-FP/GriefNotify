@@ -1,4 +1,4 @@
-package org.makarfp.griefNotify.listeners;
+package org.makarfp.griefnotify.listener;
 
 import com.sk89q.worldedit.bukkit.BukkitAdapter;
 import com.sk89q.worldguard.WorldGuard;
@@ -13,10 +13,10 @@ import org.bukkit.event.*;
 import org.bukkit.event.block.*;
 import org.bukkit.event.entity.*;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.makarfp.griefNotify.GriefNotify;
-import org.makarfp.griefNotify.utils.GameMessageBuilder;
-import org.makarfp.griefNotify.utils.TelegramMessageBuilder;
-import org.makarfp.griefNotify.utils.TelegramUtil;
+import org.makarfp.griefnotify.GriefNotify;
+import org.makarfp.griefnotify.util.GameMessageBuilder;
+import org.makarfp.griefnotify.util.TelegramMessageBuilder;
+import org.makarfp.griefnotify.util.TelegramUtil;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;

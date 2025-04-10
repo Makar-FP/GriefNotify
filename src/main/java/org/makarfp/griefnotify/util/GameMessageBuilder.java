@@ -1,4 +1,4 @@
-package org.makarfp.griefNotify.utils;
+package org.makarfp.griefnotify.util;
 
 import org.bukkit.ChatColor;
 

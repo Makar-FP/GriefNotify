@@ -1,12 +1,12 @@
-package org.makarfp.griefNotify.commands;
+package org.makarfp.griefnotify.command;
 
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.makarfp.griefNotify.GriefNotify;
-import org.makarfp.griefNotify.checks.TelegramCheck;
-import org.makarfp.griefNotify.config.ConfigManager;
+import org.makarfp.griefnotify.GriefNotify;
+import org.makarfp.griefnotify.check.TelegramCheck;
+import org.makarfp.griefnotify.config.ConfigManager;
 
 public class GriefNotifyCommand implements CommandExecutor {
 

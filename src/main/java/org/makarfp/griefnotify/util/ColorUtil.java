@@ -1,4 +1,4 @@
-package org.makarfp.griefNotify.utils;
+package org.makarfp.griefnotify.util;
 
 import net.md_5.bungee.api.ChatColor;
 

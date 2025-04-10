@@ -1,9 +1,9 @@
-package org.makarfp.griefNotify.config;
+package org.makarfp.griefnotify.config;
 
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.makarfp.griefNotify.GriefNotify;
-import org.makarfp.griefNotify.utils.ColorUtil;
+import org.makarfp.griefnotify.GriefNotify;
+import org.makarfp.griefnotify.util.ColorUtil;
 
 import java.io.File;
 import java.io.IOException;

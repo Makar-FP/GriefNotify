@@ -1,7 +1,7 @@
-package org.makarfp.griefNotify.checks;
+package org.makarfp.griefnotify.check;
 
 import org.bukkit.Bukkit;
-import org.makarfp.griefNotify.GriefNotify;
+import org.makarfp.griefnotify.GriefNotify;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
