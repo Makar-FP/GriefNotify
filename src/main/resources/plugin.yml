@@ -2,6 +2,7 @@ name: GriefNotify
 version: '1.0-SNAPSHOT'
 main: org.makarfp.griefnotify.GriefNotify
 api-version: '1.21'
+depend: [PlaceholderAPI]
 commands:
   griefnotify:
     description: Включение или отключение уведомлений о гриферстве

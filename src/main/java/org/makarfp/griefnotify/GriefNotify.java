@@ -1,10 +1,13 @@
 package org.makarfp.griefnotify;
 
+import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.makarfp.griefnotify.command.GriefNotifyCommand;
 import org.makarfp.griefnotify.config.ConfigManager;
 import org.makarfp.griefnotify.data.DatabaseManager;
+import org.makarfp.griefnotify.data.MaterialData;
 import org.makarfp.griefnotify.listener.GriefListener;
+import org.makarfp.griefnotify.util.GriefNotifyPlaceholder;
 import org.makarfp.griefnotify.util.TelegramUtil;
 
 public final class GriefNotify extends JavaPlugin {
@@ -18,8 +21,14 @@ public final class GriefNotify extends JavaPlugin {
     public void onEnable() {
         instance = this;
 
+        if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+            new GriefNotifyPlaceholder(this).register();
+        }
+
         saveDefaultConfig();
         configManager = new ConfigManager(this);
+
+        MaterialData.init();
 
         TelegramUtil.initialize(configManager);
 

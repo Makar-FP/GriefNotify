@@ -14,6 +14,7 @@ import org.bukkit.event.block.*;
 import org.bukkit.event.entity.*;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.makarfp.griefnotify.GriefNotify;
+import org.makarfp.griefnotify.data.MaterialData;
 import org.makarfp.griefnotify.util.GameMessageBuilder;
 import org.makarfp.griefnotify.util.TelegramMessageBuilder;
 import org.makarfp.griefnotify.util.TelegramUtil;
@@ -28,9 +29,11 @@ public class GriefListener implements Listener {
     private final Map<Player, Long> lastAlertPerPlayer = new ConcurrentHashMap<>();
     private final Map<Location, Player> recentPlacements = new ConcurrentHashMap<>();
     private final Map<Location, Player> recentSpawns = new ConcurrentHashMap<>();
+    private final Map<UUID, Long> lastOwnerAlertTimestamps = new ConcurrentHashMap<>();
 
+    private static final long ALERT_OWNER_COOLDOWN = 600000;
     private static final long ALERT_COOLDOWN = 3600000;
-    private static final long ALERT_PER_PLAYER_COOLDOWN = 300000;
+    private static final long ALERT_PER_PLAYER_COOLDOWN = 450000;
     private static final long PLACEMENT_CACHE_TTL = 5 * 60 * 1000;
 
     public GriefListener(GriefNotify plugin) {
@@ -77,17 +80,21 @@ public class GriefListener implements Listener {
 
     @EventHandler
     public void onPlayerPlace(BlockPlaceEvent event) {
-        if (event.getBlock().getType() == Material.TNT) {
-            Location loc = event.getBlock().getLocation();
-            Player player = event.getPlayer();
-            recentPlacements.put(loc, player);
-            new BukkitRunnable() {
-                @Override
-                public void run() {
-                    recentPlacements.remove(loc);
-                }
-            }.runTaskLater(plugin, PLACEMENT_CACHE_TTL / 50);
+        Material type = event.getBlock().getType();
+        if (!MaterialData.isTracked(type)) {
+            return;
         }
+
+        Location loc = event.getBlock().getLocation();
+        Player player = event.getPlayer();
+        recentPlacements.put(loc, player);
+
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                recentPlacements.remove(loc);
+            }
+        }.runTaskLater(plugin, PLACEMENT_CACHE_TTL / 50);
     }
 
     @EventHandler
@@ -114,60 +121,100 @@ public class GriefListener implements Listener {
             attacker = findNearbyRecentPlacer(block.getLocation());
         }
 
-        RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
-        RegionManager regions = container.get(BukkitAdapter.adapt(block.getWorld()));
-
+        RegionManager regions = getRegionManager(block);
         if (regions == null) return;
 
         ApplicableRegionSet set = regions.getApplicableRegions(BukkitAdapter.asBlockVector(block.getLocation()));
         if (set.size() == 0) return;
 
         for (ProtectedRegion region : set) {
-            String regionId = region.getId();
+            if (shouldSkipRegion(region, attacker)) continue;
+            if (!shouldNotify(region.getId(), attacker)) continue;
 
-            if (attacker != null && (region.getOwners().contains(attacker.getUniqueId()) || region.getMembers().contains(attacker.getUniqueId()))) {
-                continue;
-            }
-
-            long lastAlert = lastAlertTimestamps.getOrDefault(regionId, 0L);
-            if (System.currentTimeMillis() - lastAlert < ALERT_COOLDOWN) continue;
-
-            if (attacker != null) {
-                long lastPlayerAlert = lastAlertPerPlayer.getOrDefault(attacker, 0L);
-                if (System.currentTimeMillis() - lastPlayerAlert < ALERT_PER_PLAYER_COOLDOWN) continue;
-                lastAlertPerPlayer.put(attacker, System.currentTimeMillis());
-            }
-
-            lastAlertTimestamps.put(regionId, System.currentTimeMillis());
+            updateAlertTimestamps(region.getId(), attacker);
 
             String attackerName = attacker != null ? attacker.getName() : "Неизвестно";
             String worldName = getWorldName(block.getWorld());
-            Set<UUID> owners = region.getOwners().getUniqueIds();
-            boolean foundOnline = false;
 
-            for (UUID uuid : owners) {
-                Player owner = Bukkit.getPlayer(uuid);
-                if (owner != null && owner.isOnline() && plugin.getConfigManager().isGriefNotifyEnabled(owner.getName())) {
-                    sendInGameMessage(owner, attackerName, regionId, worldName);
-                    foundOnline = true;
-                    break;
-                }
+            if (!notifyOnlineOwners(region, attackerName, worldName)) {
+                notifyOfflineOwners(region, attackerName, worldName);
             }
+        }
+    }
 
-            if (!foundOnline && !owners.isEmpty()) {
-                UUID uuid = owners.iterator().next();
-                String offlineName = Bukkit.getOfflinePlayer(uuid).getName();
-                if (offlineName != null && plugin.getConfigManager().isGriefNotifyEnabled(offlineName)) {
-                    Long telegramId = plugin.getConfigManager().getTelegramId(offlineName);
-                    if (telegramId != null) {
-                        String message = TelegramMessageBuilder.build(attackerName, regionId + " (" + worldName + ")");
-                        new BukkitRunnable() {
-                            @Override
-                            public void run() {
-                                TelegramUtil.sendTelegramMessage(telegramId, message);
-                            }
-                        }.runTaskAsynchronously(plugin);
-                    }
+    private RegionManager getRegionManager(Block block) {
+        RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
+        return container.get(BukkitAdapter.adapt(block.getWorld()));
+    }
+
+    private boolean shouldSkipRegion(ProtectedRegion region, Player attacker) {
+        if (attacker == null) return false;
+        UUID uuid = attacker.getUniqueId();
+        return region.getOwners().contains(uuid) || region.getMembers().contains(uuid);
+    }
+
+    private boolean shouldNotify(String regionId, Player attacker) {
+        long currentTime = System.currentTimeMillis();
+
+        long lastAlert = lastAlertTimestamps.getOrDefault(regionId, 0L);
+        if (currentTime - lastAlert < ALERT_COOLDOWN) return false;
+
+        if (attacker != null) {
+            long lastPlayerAlert = lastAlertPerPlayer.getOrDefault(attacker, 0L);
+            if (currentTime - lastPlayerAlert < ALERT_PER_PLAYER_COOLDOWN) return false;
+        }
+
+        return true;
+    }
+
+    private void updateAlertTimestamps(String regionId, Player attacker) {
+        long currentTime = System.currentTimeMillis();
+        lastAlertTimestamps.put(regionId, currentTime);
+        if (attacker != null) {
+            lastAlertPerPlayer.put(attacker, currentTime);
+        }
+    }
+
+    private boolean shouldNotifyOwner(UUID ownerId) {
+        long currentTime = System.currentTimeMillis();
+        long lastAlert = lastOwnerAlertTimestamps.getOrDefault(ownerId, 0L);
+        return currentTime - lastAlert >= ALERT_OWNER_COOLDOWN;
+    }
+
+    private void updateOwnerAlert(UUID ownerId) {
+        lastOwnerAlertTimestamps.put(ownerId, System.currentTimeMillis());
+    }
+
+    private boolean notifyOnlineOwners(ProtectedRegion region, String attackerName, String worldName) {
+        for (UUID uuid : region.getOwners().getUniqueIds()) {
+            if (!shouldNotifyOwner(uuid)) continue;
+
+            Player owner = Bukkit.getPlayer(uuid);
+            if (owner != null && owner.isOnline() && plugin.getConfigManager().isGriefNotifyEnabled(owner.getName())) {
+                sendInGameMessage(owner, attackerName, region.getId(), worldName);
+                updateOwnerAlert(uuid); // запоминаем время
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void notifyOfflineOwners(ProtectedRegion region, String attackerName, String worldName) {
+        for (UUID uuid : region.getOwners().getUniqueIds()) {
+            if (!shouldNotifyOwner(uuid)) continue;
+
+            String offlineName = Bukkit.getOfflinePlayer(uuid).getName();
+            if (offlineName != null && plugin.getConfigManager().isGriefNotifyEnabled(offlineName)) {
+                Long telegramId = plugin.getConfigManager().getTelegramId(offlineName);
+                if (telegramId != null) {
+                    String message = TelegramMessageBuilder.build(attackerName, region.getId() + " (" + worldName + ")");
+                    updateOwnerAlert(uuid); // запоминаем
+                    new BukkitRunnable() {
+                        @Override
+                        public void run() {
+                            TelegramUtil.sendTelegramMessage(telegramId, message);
+                        }
+                    }.runTaskAsynchronously(plugin);
                 }
             }
         }
@@ -175,13 +222,13 @@ public class GriefListener implements Listener {
 
     private Player findNearbyRecentPlacer(Location location) {
         for (Map.Entry<Location, Player> entry : recentPlacements.entrySet()) {
-            if (entry.getKey().getWorld().equals(location.getWorld()) && entry.getKey().distance(location) <= 5) {
+            if (entry.getKey().getWorld().equals(location.getWorld()) && entry.getKey().distance(location) <= 15) {
                 return entry.getValue();
             }
         }
 
         for (Map.Entry<Location, Player> entry : recentSpawns.entrySet()) {
-            if (entry.getKey().getWorld().equals(location.getWorld()) && entry.getKey().distance(location) <= 5) {
+            if (entry.getKey().getWorld().equals(location.getWorld()) && entry.getKey().distance(location) <= 15) {
                 return entry.getValue();
             }
         }
